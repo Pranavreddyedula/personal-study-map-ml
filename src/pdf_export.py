@@ -1,19 +1,39 @@
-from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import inch
+from datetime import datetime
+from .utils import ensure_dir, timestamp_str, logger
 
-def export_pdf(study_items, path):
-    c = canvas.Canvas(path, pagesize=letter)
-    c.setFont("Helvetica-Bold", 18)
-    c.drawString(50, 750, "Personal Study Map")
+def export_pdf(study_items, path, title="Personal Study Map"):
+    """
+    study_items: list of dicts {topic, weight}
+    """
+    # ensure output directory exists
+    out_dir = path.rsplit("/",1)[0] if "/" in path else "."
+    ensure_dir(out_dir)
 
-    c.setFont("Helvetica", 12)
-    y = 700
-    for item in study_items:
-        c.drawString(50, y, f"- {item['topic']} (score: {item['weight']})")
-        y -= 20
+    try:
+        c = canvas.Canvas(path, pagesize=letter)
+        width, height = letter
+        # Header
+        c.setFont("Helvetica-Bold", 18)
+        c.drawString(72, height - 72, title)
+        c.setFont("Helvetica", 10)
+        c.drawString(72, height - 90, f"Generated: {datetime.utcnow().isoformat()} UTC")
 
-        if y < 80:
-            c.showPage()
-            y = 700
+        # Body list
+        c.setFont("Helvetica", 12)
+        y = height - 120
+        for i, it in enumerate(study_items, start=1):
+            line = f"{i}. {it.get('topic')} (score: {it.get('weight')})"
+            c.drawString(72, y, line)
+            y -= 16
+            if y < 72:
+                c.showPage()
+                y = height - 72
 
-    c.save()
+        c.save()
+        logger.info("Exported PDF to %s", path)
+    except Exception as e:
+        logger.error("Failed to create PDF: %s", e)
+        raise
