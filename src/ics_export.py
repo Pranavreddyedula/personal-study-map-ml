@@ -1,19 +1,19 @@
 from ics import Calendar, Event
 from datetime import date, timedelta
-from .utils import ensure_dir, timestamp_str, logger
+from utils import ensure_dir, timestamp_str, logger
 
 def export_ics(study_items, path):
     """
     study_items: list of dicts with 'topic' and optionally 'weight'
     path: full path to write .ics file
     """
-    ensure_dir(path.rsplit("/",1)[0] if "/" in path else ".")
+    out_dir = path.rsplit("/",1)[0] if "/" in path else "."
+    ensure_dir(out_dir)
     cal = Calendar()
     start = date.today()
     for i, it in enumerate(study_items):
         e = Event()
         e.name = f"Study: {it.get('topic')}"
-        # schedule one topic per day by default; make all-day events
         e.begin = (start + timedelta(days=i)).isoformat()
         e.make_all_day()
         e.description = f"Priority score: {it.get('weight')}"
