@@ -1,34 +1,51 @@
 import os
 import zipfile
-from data_processing import load_social_json, extract_topics
-from pdf_export import export_pdf
-from ics_export import export_ics
+from datetime import datetime
+from .data_processing import load_social_json, extract_topics
+from .pdf_export import export_pdf
+from .ics_export import export_ics
+from .utils import ensure_dir, safe_filename, timestamp_str, logger
+
+def _unique_basename(prefix="study_map"):
+    return f"{safe_filename(prefix)}_{timestamp_str()}"
 
 def generate_study_map(data, out_dir="output"):
-    os.makedirs(out_dir, exist_ok=True)
+    """
+    Orchestrates creation of study_map.pdf, study_plan.ics and a zip.
+    Returns the relative zip path (for web linking).
+    """
+    ensure_dir(out_dir)
+    try:
+        df = load_social_json(data)
+    except Exception as e:
+        logger.error("Failed to load social json: %s", e)
+        raise
 
-    df = load_social_json(data)
-    df = extract_topics(df)
+    topics = extract_topics(df, prefer_hashtags=True, top_n=20)
 
-    topic_weights = {}
-    for topics in df["topics"]:
-        for t in topics:
-            topic_weights[t] = topic_weights.get(t, 0) + 1
+    # filenames
+    base = _unique_basename("study_map")
+    pdf_path = os.path.join(out_dir, f"{base}.pdf")
+    ics_path = os.path.join(out_dir, f"{base}.ics")
+    zip_path = os.path.join(out_dir, f"{base}.zip")
 
-    study_items = [
-        {"topic": t, "weight": score}
-        for t, score in sorted(topic_weights.items(), key=lambda x: -x[1])
-    ]
+    # create artifacts
+    try:
+        export_pdf(topics, pdf_path)
+        export_ics(topics, ics_path)
+    except Exception as e:
+        logger.error("Failed to export artifacts: %s", e)
+        raise
 
-    pdf_path = os.path.join(out_dir, "study_map.pdf")
-    ics_path = os.path.join(out_dir, "study_plan.ics")
+    # make a zip containing both
+    try:
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as z:
+            z.write(pdf_path, arcname=os.path.basename(pdf_path))
+            z.write(ics_path, arcname=os.path.basename(ics_path))
+        logger.info("Created zip: %s", zip_path)
+    except Exception as e:
+        logger.error("Failed to create zip: %s", e)
+        raise
 
-    export_pdf(study_items, pdf_path)
-    export_ics(study_items, ics_path)
-
-    zip_path = os.path.join(out_dir, "study-map.zip")
-    with zipfile.ZipFile(zip_path, "w") as z:
-        z.write(pdf_path, "study_map.pdf")
-        z.write(ics_path, "study_plan.ics")
-
-    return zip_path.replace("\\", "/")
+    # return relative path for Flask send_from_directory (just basename under out_dir)
+    return zip_path
