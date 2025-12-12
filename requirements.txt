@@ -6,3 +6,7 @@ nltk
 reportlab
 ics
 python-dateutil
+PyMuPDF==1.22.5
+networkx==3.1
+matplotlib==3.7.2
+
