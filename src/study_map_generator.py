@@ -1,10 +1,10 @@
 import os
 import zipfile
 from datetime import datetime
-from .data_processing import load_social_json, extract_topics
-from .pdf_export import export_pdf
-from .ics_export import export_ics
-from .utils import ensure_dir, safe_filename, timestamp_str, logger
+from data_processing import load_social_json, extract_topics
+from pdf_export import export_pdf
+from ics_export import export_ics
+from utils import ensure_dir, safe_filename, timestamp_str, logger
 
 def _unique_basename(prefix="study_map"):
     return f"{safe_filename(prefix)}_{timestamp_str()}"
@@ -12,7 +12,7 @@ def _unique_basename(prefix="study_map"):
 def generate_study_map(data, out_dir="output"):
     """
     Orchestrates creation of study_map.pdf, study_plan.ics and a zip.
-    Returns the relative zip path (for web linking).
+    Returns the full zip path (so app can serve it).
     """
     ensure_dir(out_dir)
     try:
@@ -47,5 +47,4 @@ def generate_study_map(data, out_dir="output"):
         logger.error("Failed to create zip: %s", e)
         raise
 
-    # return relative path for Flask send_from_directory (just basename under out_dir)
     return zip_path
