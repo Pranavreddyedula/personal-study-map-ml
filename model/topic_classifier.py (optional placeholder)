@@ -1,0 +1,6 @@
+# Placeholder for future ML/NLP model integration
+
+class TopicClassifier:
+    def predict(self, text):
+        return ["example_topic"]
+
