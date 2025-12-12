@@ -3,7 +3,7 @@ from dateutil import parser
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from typing import List, Dict
-from .utils import logger
+from utils import logger
 
 HASHTAG_RE = re.compile(r"#([A-Za-z0-9_]+)")
 
